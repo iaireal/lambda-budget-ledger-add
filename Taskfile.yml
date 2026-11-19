@@ -1,0 +1,35 @@
+# Tasks for lambda-budget-ledger-add. Run `task` to list them.
+version: '3'
+
+tasks:
+  default:
+    desc: List the available tasks
+    silent: true
+    cmds:
+      - task --list
+
+  fmt:
+    desc: Format the Rust code
+    cmds:
+      - cargo fmt
+
+  check:
+    desc: Check formatting, run the linter and run the tests
+    cmds:
+      - cargo fmt --check
+      - cargo clippy --all-targets -- -D warnings
+      - cargo test
+
+  test:
+    desc: Run the tests
+    cmds:
+      - cargo test
+
+  build:
+    desc: Build the function for AWS Lambda (arm64) as a zip file
+    summary: |
+      Produces target/lambda/lambda-budget-ledger-add/bootstrap.zip. The zip
+      holds one file, `bootstrap`, the name Lambda expects for a program on
+      the provided.al2023 runtime.
+    cmds:
+      - cargo lambda build --release --arm64 --output-format zip
