@@ -1,0 +1,34 @@
+# Checks every change: formatting, linter, tests and the build for Lambda.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # rustup is already on the runner. rust-toolchain.toml tells it which
+      # Rust version, components and build target to install.
+      - name: Install the Rust toolchain
+        run: rustup show
+
+      # The steps below run the same commands as `task check` and `task build`.
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Run the linter
+        run: cargo clippy --all-targets --locked -- -D warnings
+
+      - name: Run the tests
+        run: cargo test --locked
+
+      - name: Build for Lambda
+        run: cargo build --release --locked --target aarch64-unknown-linux-musl

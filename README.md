@@ -27,6 +27,7 @@ This repository holds the source code of this one function and nothing else.
 | `rust-toolchain.toml` | The Rust version and the build target, installed by rustup |
 | `.cargo/config.toml` | The linker used to build for Lambda |
 | `Taskfile.yml` | The tasks listed below |
+| `.github/workflows/` | The automatic checks and the release, run by GitHub Actions |
 
 The Terraform that deploys the function lives in its own repository,
 `infra-lambda-budget-ledger-add`.
@@ -66,6 +67,31 @@ The function is built for arm64. Create it in Lambda with:
 | Runtime | `provided.al2023` |
 | Architecture | `arm64` |
 | Handler | `bootstrap` |
+
+## Releases
+
+A release is the built function, ready to deploy. Each one holds two files:
+
+| File | Contents |
+| ---- | -------- |
+| `bootstrap.zip` | The zip file Lambda runs |
+| `bootstrap.zip.sha256` | Its SHA-256 checksum |
+
+GitHub Actions builds and publishes a release when a version tag is pushed. To release:
+
+1. Set the new version in `Cargo.toml`, run `cargo build` so `Cargo.lock` follows, and
+   commit.
+2. Tag that commit with the same version, prefixed with `v`, and push the tag:
+
+   ```bash
+   git tag v0.1.0
+   git push origin v0.1.0
+   ```
+
+The release fails if the tag does not match the version in `Cargo.toml`.
+
+`infra-lambda-budget-ledger-add` deploys a release by its version. It never builds the
+function itself.
 
 ## How the build works
 

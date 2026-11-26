@@ -1,0 +1,55 @@
+# Publishes a release when a version tag (for example v0.1.0) is pushed.
+#
+# The release holds bootstrap.zip, the file Lambda runs, and its SHA-256
+# checksum. The Terraform that deploys the function downloads them from here.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write # needed to create the release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install the Rust toolchain
+        run: rustup show
+
+      - name: Check that the tag matches the version in Cargo.toml
+        run: |
+          version=$(cargo metadata --no-deps --format-version 1 --locked \
+            | jq -r '.packages[0].version')
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match Cargo.toml version $version."
+            exit 1
+          fi
+
+      - name: Run the tests
+        run: cargo test --locked
+
+      # The steps below run the same commands as `task build`.
+      - name: Build for Lambda
+        run: cargo build --release --locked --target aarch64-unknown-linux-musl
+
+      - name: Package the zip file
+        run: |
+          mkdir -p target/lambda
+          cp target/aarch64-unknown-linux-musl/release/lambda-budget-ledger-add target/lambda/bootstrap
+          cd target/lambda
+          zip -j -X bootstrap.zip bootstrap
+          sha256sum bootstrap.zip > bootstrap.zip.sha256
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            target/lambda/bootstrap.zip \
+            target/lambda/bootstrap.zip.sha256 \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes
