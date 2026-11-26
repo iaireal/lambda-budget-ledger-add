@@ -1,0 +1,7 @@
+# Lambda runs the function on Linux arm64. The program is built as a static
+# executable (the musl target), so it needs nothing from the system it runs on.
+#
+# rust-lld is the linker that ships with Rust. Using it means no arm64 C
+# toolchain has to be installed to build from another kind of machine.
+[target.aarch64-unknown-linux-musl]
+linker = "rust-lld"

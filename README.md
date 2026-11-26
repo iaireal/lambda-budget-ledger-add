@@ -24,6 +24,8 @@ This repository holds the source code of this one function and nothing else.
 | ---- | -------- |
 | `src/main.rs` | The function and its tests |
 | `Cargo.toml` | The Rust package and its dependencies |
+| `rust-toolchain.toml` | The Rust version and the build target, installed by rustup |
+| `.cargo/config.toml` | The linker used to build for Lambda |
 | `Taskfile.yml` | The tasks listed below |
 
 The Terraform that deploys the function lives in its own repository,
@@ -31,13 +33,12 @@ The Terraform that deploys the function lives in its own repository,
 
 ## Requirements
 
-- [Rust](https://rustup.rs) 1.85 or later (the package uses the 2024 edition)
-- [cargo-lambda](https://www.cargo-lambda.info), to build for Lambda
-- [Zig](https://ziglang.org/download/), which cargo-lambda uses to link the program for
-  the system Lambda runs on
+- [Rust](https://rustup.rs), installed with rustup
 - [Task](https://taskfile.dev)
+- `zip`
 
-Only the build needs cargo-lambda and Zig. The tests run with Rust alone.
+Nothing else is needed to build for Lambda: no extra cargo plugin, no C compiler for
+arm64 and no container. See [How the build works](#how-the-build-works).
 
 ## Usage
 
@@ -55,9 +56,8 @@ task build    # build the zip file for Lambda
 
 ### The build output
 
-`task build` writes `target/lambda/lambda-budget-ledger-add/bootstrap.zip`. The zip holds
-one file, `bootstrap`, which is the name Lambda expects for a program on a custom
-runtime.
+`task build` writes `target/lambda/bootstrap.zip`. The zip holds one file, `bootstrap`,
+which is the name Lambda expects for a program on a custom runtime.
 
 The function is built for arm64. Create it in Lambda with:
 
@@ -66,3 +66,19 @@ The function is built for arm64. Create it in Lambda with:
 | Runtime | `provided.al2023` |
 | Architecture | `arm64` |
 | Handler | `bootstrap` |
+
+## How the build works
+
+Lambda runs the function on Linux arm64, which is usually not the machine it is built on.
+The build handles that with the standard Rust toolchain alone:
+
+- **The target is `aarch64-unknown-linux-musl`.** It produces a static executable: the
+  program carries everything it needs and uses no library from the system it runs on, so
+  it does not matter which Linux version built it or which one Lambda runs.
+- **rustup installs the target.** `rust-toolchain.toml` lists it, so the first `cargo`
+  command in this folder downloads it.
+- **The linker is `rust-lld`,** which ships with Rust. `.cargo/config.toml` selects it,
+  so no arm64 C toolchain has to be installed.
+
+This works because the function and its dependencies are written entirely in Rust. A
+dependency that compiles C code would need a C compiler for arm64.

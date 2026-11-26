@@ -1,0 +1,6 @@
+# rustup reads this file and installs what it lists the first time cargo runs
+# in this folder, including the target the function is built for.
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]
+targets = ["aarch64-unknown-linux-musl"]

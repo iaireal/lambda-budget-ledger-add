@@ -28,8 +28,19 @@ tasks:
   build:
     desc: Build the function for AWS Lambda (arm64) as a zip file
     summary: |
-      Produces target/lambda/lambda-budget-ledger-add/bootstrap.zip. The zip
-      holds one file, `bootstrap`, the name Lambda expects for a program on
-      the provided.al2023 runtime.
+      Produces target/lambda/bootstrap.zip. The zip holds one file,
+      `bootstrap`, the name Lambda expects for a program on the
+      provided.al2023 runtime.
+
+      Needs only the Rust toolchain and `zip`. rust-toolchain.toml makes
+      rustup install the arm64 target, and .cargo/config.toml selects the
+      linker that ships with Rust.
+    vars:
+      TARGET: aarch64-unknown-linux-musl
     cmds:
-      - cargo lambda build --release --arm64 --output-format zip
+      - cargo build --release --locked --target {{.TARGET}}
+      - mkdir -p target/lambda
+      - cp target/{{.TARGET}}/release/lambda-budget-ledger-add target/lambda/bootstrap
+      - rm -f target/lambda/bootstrap.zip
+      # -j stores the file without its folder, -X leaves out extra file attributes.
+      - zip -j -X target/lambda/bootstrap.zip target/lambda/bootstrap
